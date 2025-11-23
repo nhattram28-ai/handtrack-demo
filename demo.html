@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Thao giảng biến đổi khí hậu</title>
+  <script src="https://cdn.jsdelivr.net/npm/handtrackjs@0.0.21/dist/handtrack.min.js"></script>
+  <style>
+    body { text-align: center; font-family: sans-serif; background: #eef; }
+    #video { border: 2px solid #333; }
+    #canvas { position: absolute; top: 0; left: 0; }
+    .info { margin-top: 10px; font-size: 18px; }
+  </style>
+</head>
+<body>
+  <h2>Demo: Bốc giải pháp biến đổi khí hậu</h2>
+  <video id="video" width="640" height="480" autoplay></video>
+  <canvas id="canvas" width="640" height="480"></canvas>
+  <div class="info" id="score">Điểm: 0</div>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+
+    // Danh sách vật thể (x, y, loại, trạng thái)
+    let objects = [
+      {x:100, y:100, type:'giảm nhẹ', caught:false, label:'🌳'},
+      {x:300, y:150, type:'thích ứng', caught:false, label:'🛶'},
+      {x:500, y:200, type:'giảm nhẹ', caught:false, label:'♻️'},
+      {x:200, y:300, type:'thích ứng', caught:false, label:'🏠'},
+    ];
+
+    let score = 0;
+
+    const modelParams = {
+      flipHorizontal: true,   // lật camera
+      maxNumBoxes: 1,         // phát hiện 1 bàn tay
+      iouThreshold: 0.5,
+      scoreThreshold: 0.6,
+    };
+
+    let model;
+
+<!doctype html>
+<html lang="vi">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trò Chơi Bắt Giải Pháp Khí Hậu</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <style>
+body {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+html {
+  height: 100%;
+}
+
+#game-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+#video {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 90%;
+  max-height: 80%;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  z-index: 1;
+}
+
+#canvas {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 90%;
+  max-height: 80%;
+  z-index: 2;
+  pointer-events: none;
+}
+
+#ui-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+#score-panel {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 15px 25px;
+  border-radius: 15px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  pointer-events: auto;
+}
+
+#score-panel h2 {
+  margin: 0 0 10px 0;
+  font-size: 18px;
+  color: #667eea;
+}
+
+#score {
+  font-size: 32px;
+  font-weight: bold;
+  color: #333;
+  margin: 0;
+}
+
+#type-score {
+  font-size: 14px;
+  color: #666;
+  margin-top: 8px;
+}
+
+#instructions {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 15px 20px;
+  border-radius: 15px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  max-width: 250px;
+  pointer-events: auto;
+}
+
+#instructions h3 {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  color: #667eea;
+}
+
+#instructions p {
+  margin: 5px 0;
+  font-size: 14px;
+  color: #333;
+  line-height: 1.5;
+}
+
+#instructions .legend {
+  display: flex;
+  align-items: center;
+  margin: 8px 0;
+  font-size: 13px;
+}
+
+#instructions .legend span {
+  font-size: 24px;
+  margin-right: 8px;
+}
+
+#start-button {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 20px 40px;
+  font-size: 20px;
+  font-weight: bold;
+  border-radius: 50px;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  transition: all 0.3s ease;
+  pointer-events: auto;
+  z-index: 10;
+}
+
+#start-button:hover {
+  background: #5568d3;
+  transform: translate(-50%, -50%) scale(1.05);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+}
+
+#loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.95);
+  padding: 30px 50px;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+  pointer-events: auto;
+  z-index: 10;
+  display: none;
+}
+
+#loading p {
+  margin: 0;
+  font-size: 18px;
+  color: #333;
+}
+
+.spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #667eea;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 20px auto 0;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+#error-message {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.95);
+  padding: 30px 40px;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+  max-width: 400px;
+  pointer-events: auto;
+  z-index: 10;
+  display: none;
+}
+
+#error-message h3 {
+  margin: 0 0 15px 0;
+  color: #e74c3c;
+  font-size: 20px;
+}
+
+#error-message p {
+  margin: 0;
+  color: #333;
+  line-height: 1.6;
+}
+</style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+ </head>
+ <body>
+  <div id="game-container">
+   <video id="video" width="640" height="480" autoplay playsinline></video>
+   <canvas id="canvas" width="640" height="480"></canvas>
+   <div id="ui-overlay">
+    <div id="score-panel">
+     <h2>Điểm Số</h2>
+     <p id="score">0</p>
+     <p id="type-score">Giảm nhẹ: 0 | Thích ứng: 0</p>
+    </div>
+    <div id="instructions">
+     <h3>Cách Chơi</h3>
+     <p>Di chuyển tay để bắt các biểu tượng giải pháp khí hậu!</p>
+     <div class="legend"><span>🌳</span> <span>♻️</span> Giảm nhẹ
+     </div>
+     <div class="legend"><span>🛶</span> <span>🏠</span> Thích ứng
+     </div>
+    </div><button id="start-button">Bắt Đầu Chơi</button>
+    <div id="loading">
+     <p>Đang tải mô hình AI...</p>
+     <div class="spinner"></div>
+    </div>
+    <div id="error-message">
+     <h3>Không thể khởi động</h3>
+     <p>Vui lòng cho phép truy cập webcam để chơi trò chơi này.</p>
+    </div>
+   </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/handtrackjs@0.0.21/dist/handtrack.min.js"></script>
+  <script>
+const defaultConfig = {
+  game_title: "Trò Chơi Bắt Giải Pháp Khí Hậu",
+  instruction_text: "Di chuyển tay để bắt các biểu tượng giải pháp khí hậu!",
+  mitigation_label: "Giảm nhẹ",
+  adaptation_label: "Thích ứng",
+  start_button_text: "Bắt Đầu Chơi",
+  score_label: "Điểm Số",
+  primary_color: "#667eea",
+  secondary_color: "#764ba2",
+  text_color: "#333333",
+  accent_color: "#ffffff",
+  button_color: "#667eea"
+};
+
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score');
+const typeScoreEl = document.getElementById('type-score');
+const startButton = document.getElementById('start-button');
+const loadingEl = document.getElementById('loading');
+const errorEl = document.getElementById('error-message');
+const instructionsEl = document.getElementById('instructions');
+
+let score = 0;
+let mitigationScore = 0;
+let adaptationScore = 0;
+let gameStarted = false;
+let model = null;
+
+const solutionTypes = {
+  mitigation: ['🌳', '♻️', '⚡', '🚲'],
+  adaptation: ['🛶', '🏠', '🌊', '🌾']
+};
+
+let icons = [];
+
+function createIcon() {
+  const isMitigation = Math.random() > 0.5;
+  const type = isMitigation ? 'mitigation' : 'adaptation';
+  const labels = solutionTypes[type];
+  const label = labels[Math.floor(Math.random() * labels.length)];
+  
+  return {
+    x: Math.random() * (canvas.width - 60) + 30,
+    y: -50,
+    velocityY: 1 + Math.random() * 2,
+    label: label,
+    type: type,
+    caught: false,
+    size: 40
+  };
+}
+
+function initGame() {
+  icons = [];
+  for (let i = 0; i < 4; i++) {
+    icons.push(createIcon());
+  }
+}
+
+async function onConfigChange(config) {
+  const gameTitle = config.game_title || defaultConfig.game_title;
+  const instructionText = config.instruction_text || defaultConfig.instruction_text;
+  const mitigationLabel = config.mitigation_label || defaultConfig.mitigation_label;
+  const adaptationLabel = config.adaptation_label || defaultConfig.adaptation_label;
+  const startButtonText = config.start_button_text || defaultConfig.start_button_text;
+  const scoreLabel = config.score_label || defaultConfig.score_label;
+  const primaryColor = config.primary_color || defaultConfig.primary_color;
+  const secondaryColor = config.secondary_color || defaultConfig.secondary_color;
+  const textColor = config.text_color || defaultConfig.text_color;
+  const accentColor = config.accent_color || defaultConfig.accent_color;
+  const buttonColor = config.button_color || defaultConfig.button_color;
+
+  document.querySelector('#score-panel h2').textContent = scoreLabel;
+  document.querySelector('#instructions h3').textContent = gameTitle;
+  document.querySelector('#instructions p').textContent = instructionText;
+  startButton.textContent = startButtonText;
+  
+  const legendItems = instructionsEl.querySelectorAll('.legend');
+  if (legendItems[0]) legendItems[0].innerHTML = `<span>🌳</span> <span>♻️</span> ${mitigationLabel}`;
+  if (legendItems[1]) legendItems[1].innerHTML = `<span>🛶</span> <span>🏠</span> ${adaptationLabel}`;
+  
+  document.body.style.background = `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`;
+  document.querySelector('#score-panel h2').style.color = primaryColor;
+  startButton.style.backgroundColor = buttonColor;
+  document.querySelectorAll('#score-panel, #instructions, #loading, #error-message').forEach(el => {
+    el.style.color = textColor;
+  });
+  
+  typeScoreEl.textContent = `${mitigationLabel}: ${mitigationScore} | ${adaptationLabel}: ${adaptationScore}`;
+}
+
+startButton.addEventListener('click', async () => {
+  startButton.style.display = 'none';
+  loadingEl.style.display = 'block';
+  
+  try {
+    const modelParams = { 
+      flipHorizontal: true, 
+      maxNumBoxes: 1, 
+      scoreThreshold: 0.6 
+    };
+    
+    const status = await handTrack.startVideo(video);
+    
+    if (status) {
+      model = await handTrack.load(modelParams);
+      loadingEl.style.display = 'none';
+      gameStarted = true;
+      initGame();
+      runDetection();
+    } else {
+      throw new Error('Could not start video');
+    }
+  } catch (err) {
+    loadingEl.style.display = 'none';
+    errorEl.style.display = 'block';
+  }
+});
+
+function runDetection() {
+  if (!gameStarted) return;
+  
+  model.detect(video).then(predictions => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    icons.forEach((icon, index) => {
+      if (!icon.caught) {
+        icon.y += icon.velocityY;
+        
+        if (icon.y > canvas.height + 50) {
+          icons[index] = createIcon();
+        }
+        
+        const config = window.elementSdk?.config || defaultConfig;
+        const mitigationLabel = config.mitigation_label || defaultConfig.mitigation_label;
+        const adaptationLabel = config.adaptation_label || defaultConfig.adaptation_label;
+        
+        ctx.font = `${icon.size}px Arial`;
+        ctx.fillStyle = icon.type === 'mitigation' ? '#27ae60' : '#e67e22';
+        ctx.fillText(icon.label, icon.x, icon.y);
+      }
+    });
+    
+    if (predictions.length > 0) {
+      const hand = predictions[0].bbox;
+      const handX = hand[0] + hand[2] / 2;
+      const handY = hand[1] + hand[3] / 2;
+      
+      ctx.strokeStyle = '#e74c3c';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(hand[0], hand[1], hand[2], hand[3]);
+      
+      ctx.fillStyle = 'rgba(231, 76, 60, 0.3)';
+      ctx.fillRect(hand[0], hand[1], hand[2], hand[3]);
+      
+      icons.forEach((icon, index) => {
+        if (!icon.caught) {
+          const distance = Math.sqrt(
+            Math.pow(handX - icon.x, 2) + 
+            Math.pow(handY - icon.y, 2)
+          );
+          
+          if (distance < 50) {
+            icon.caught = true;
+            score += 1;
+            
+            if (icon.type === 'mitigation') {
+              mitigationScore += 1;
+            } else {
+              adaptationScore += 1;
+            }
+            
+            scoreEl.textContent = score;
+            
+            const config = window.elementSdk?.config || defaultConfig;
+            const mitigationLabel = config.mitigation_label || defaultConfig.mitigation_label;
+            const adaptationLabel = config.adaptation_label || defaultConfig.adaptation_label;
+            typeScoreEl.textContent = `${mitigationLabel}: ${mitigationScore} | ${adaptationLabel}: ${adaptationScore}`;
+            
+            icons[index] = createIcon();
+          }
+        }
+      });
+    }
+    
+    requestAnimationFrame(runDetection);
+  });
+}
+
+if (window.elementSdk) {
+  window.elementSdk.init({
+    defaultConfig,
+    onConfigChange,
+    mapToCapabilities: (config) => ({
+      recolorables: [
+        {
+          get: () => config.primary_color || defaultConfig.primary_color,
+          set: (value) => {
+            config.primary_color = value;
+            window.elementSdk.setConfig({ primary_color: value });
+          }
+        },
+        {
+          get: () => config.secondary_color || defaultConfig.secondary_color,
+          set: (value) => {
+            config.secondary_color = value;
+            window.elementSdk.setConfig({ secondary_color: value });
+          }
+        },
+        {
+          get: () => config.text_color || defaultConfig.text_color,
+          set: (value) => {
+            config.text_color = value;
+            window.elementSdk.setConfig({ text_color: value });
+          }
+        },
+        {
+          get: () => config.button_color || defaultConfig.button_color,
+          set: (value) => {
+            config.button_color = value;
+            window.elementSdk.setConfig({ button_color: value });
+          }
+        }
+      ],
+      borderables: [],
+      fontEditable: undefined,
+      fontSizeable: undefined
+    }),
+    mapToEditPanelValues: (config) => new Map([
+      ["game_title", config.game_title || defaultConfig.game_title],
+      ["instruction_text", config.instruction_text || defaultConfig.instruction_text],
+      ["mitigation_label", config.mitigation_label || defaultConfig.mitigation_label],
+      ["adaptation_label", config.adaptation_label || defaultConfig.adaptation_label],
+      ["start_button_text", config.start_button_text || defaultConfig.start_button_text],
+      ["score_label", config.score_label || defaultConfig.score_label]
+    ])
+  });
+}
+</script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9a2d48e06682ce17',t:'MTc2Mzg2NTQ0Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
+     
